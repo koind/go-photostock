@@ -6,59 +6,50 @@ import (
 	"github.com/gorilla/mux"
 	"encoding/json"
 	"html/template"
-	"fmt"
-	"io/ioutil"
+	. "github.com/koind/go-photostock/upload"
 )
 
-type ImageController struct {
+type WebService struct {
+	Uploader
 }
 
-func (imgC *ImageController) indexAction(w http.ResponseWriter, r *http.Request) {
+func (imgC *WebService) indexAction(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("template/index.html"))
 	tmpl.Execute(w, nil)
 }
 
-func (imgC *ImageController) newAction(w http.ResponseWriter, r *http.Request) {
-	file, info, err := r.FormFile("image")
-	if err != nil {
-		fmt.Println(err)
+func (imgC *WebService) newAction(w http.ResponseWriter, r *http.Request) {
+	uploader := imgC.Uploader
+
+	file, header := uploader.GetFile(r, "image")
+	uploader.MkDir("storage/images/")
+	uploader.MoveFile(file, "storage/images/" + header.Filename)
+
+	if uploader.GetError() != nil {
+		http.Error(w, uploader.GetError().Error(), 500)
 		return
 	}
-
-	contentType := info.Header.Get("Content-Type")
-	if !(contentType == "image/png" || contentType == "image/jpeg" || contentType == "image/gif") {
-		fmt.Printf("Wrong content type: %s", contentType)
-		return
-	}
-
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	//imageName := fmt.Sprintf("%d.png", time.Now().Unix())
-
-	ioutil.WriteFile(info.Filename, data, 0600)
 }
 
-func (imgC *ImageController) getOneByIdAction(w http.ResponseWriter, r *http.Request) {
+func (imgC *WebService) getOneByIdAction(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	json.NewEncoder(w).Encode(params)
 }
 
-func (imgC *ImageController) getOneByIdAndPartIdAction(w http.ResponseWriter, r *http.Request) {
+func (imgC *WebService) getOneByIdAndPartIdAction(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	json.NewEncoder(w).Encode(params)
 }
 
 func main() {
-	imageController := ImageController{}
+	ws := WebService{
+		Uploader{},
+	}
 	router := mux.NewRouter()
-	router.HandleFunc("/", imageController.indexAction).Methods("GET")
-	router.HandleFunc("/images", imageController.newAction).Methods("POST")
-	router.HandleFunc("/images/{id}", imageController.getOneByIdAction).Methods("GET")
-	router.HandleFunc("/images/{id}/parts/{part_num}", imageController.getOneByIdAndPartIdAction).Methods("GET")
+	router.HandleFunc("/", ws.indexAction).Methods("GET")
+	router.HandleFunc("/images", ws.newAction).Methods("POST")
+	router.HandleFunc("/images/{id}", ws.getOneByIdAction).Methods("GET")
+	router.HandleFunc("/images/{id}/parts/{part_num}", ws.getOneByIdAndPartIdAction).Methods("GET")
 
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
