@@ -13,6 +13,9 @@ import (
 	"strconv"
 	"image/jpeg"
 	"time"
+	"strings"
+	"image/png"
+	"image/gif"
 )
 
 type Uploader struct {
@@ -96,18 +99,56 @@ func (u *Uploader) MoveFile(file File, filePath string) {
 	}
 }
 
-func (u *Uploader) DivideByFour(imageName string, folderPath string) map[int]string {
-	if u.err != nil || imageName == "" || folderPath == "" {
+func (u *Uploader) GetImageType(name string) string {
+	if u.err != nil {
+		return ""
+	}
+
+	var imageTypes = []string{
+		".jpeg",
+		".jpg",
+		".png",
+		".gif",
+	}
+
+	for _, imgType := range imageTypes {
+		if strings.HasSuffix(name, imgType) {
+			return imgType
+		}
+	}
+
+	return ""
+}
+
+func (u *Uploader) GetImageDecode(imagePath string, file *os.File) (image.Image, error) {
+	if u.err != nil || imagePath == "" {
+		return nil, errors.New("Error")
+	}
+
+	switch {
+	case strings.HasSuffix(imagePath, ".jpeg") || strings.HasSuffix(imagePath, ".jpg"):
+		return jpeg.Decode(file)
+	case strings.HasSuffix(imagePath, ".png"):
+		return png.Decode(file)
+	case strings.HasSuffix(imagePath, ".gif"):
+		return gif.Decode(file)
+	default:
+		return nil, errors.New("Not fount image decoder")
+	}
+}
+
+func (u *Uploader) DivideByFour(imagePath string, folderPath string) map[int]string {
+	if u.err != nil || imagePath == "" || folderPath == "" {
 		return nil
 	}
 
-	file, err := os.Open(folderPath + imageName)
+	file, err := os.Open(imagePath)
 	if err != nil {
 		u.err = err
 		return nil
 	}
 
-	img, err := jpeg.Decode(file)
+	img, err := u.GetImageDecode(imagePath, file)
 	if err != nil {
 		u.err = err
 		return nil
@@ -134,7 +175,8 @@ func (u *Uploader) DivideByFour(imageName string, folderPath string) map[int]str
 			Anchor: image.Point{point.X, point.Y},
 		})
 
-		imgName := strconv.FormatInt(time.Now().Unix(), 10) + "_" + strconv.Itoa(index) + ".jpg"
+		imgType := u.GetImageType(imagePath)
+		imgName := strconv.FormatInt(time.Now().Unix(), 10) + "_" + strconv.Itoa(index) + imgType
 		out, err := os.Create(folderPath + imgName)
 		if err != nil {
 			u.err = err

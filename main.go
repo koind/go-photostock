@@ -8,6 +8,8 @@ import (
 	"html/template"
 	. "github.com/koind/go-photostock/upload"
 	"fmt"
+	"strconv"
+	"time"
 )
 
 type WebService struct {
@@ -24,11 +26,16 @@ func (imgC *WebService) newAction(w http.ResponseWriter, r *http.Request) {
 
 	var imagesName map[int]string
 	file, header := uploader.GetFile(r, "image")
-	uploader.MkDir("storage/images/")
-	uploader.MoveFile(file, "storage/images/" + header.Filename)
-	imageName := header.Filename
+
+	imageType  := uploader.GetImageType(header.Filename)
+	imageName  := strconv.FormatInt(time.Now().Unix(), 10) + imageType
 	folderPath := "storage/images/"
-	imagesName = uploader.DivideByFour(imageName, folderPath)
+	imagePath  := folderPath + imageName
+
+	uploader.MkDir(folderPath)
+	uploader.MoveFile(file, imagePath)
+
+	imagesName = uploader.DivideByFour(imagePath, folderPath)
 	fmt.Println(imagesName)
 
 	if uploader.GetError() != nil {
