@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"html/template"
 	. "github.com/koind/go-photostock/upload"
+	"fmt"
 )
 
 type WebService struct {
@@ -21,9 +22,14 @@ func (imgC *WebService) indexAction(w http.ResponseWriter, r *http.Request) {
 func (imgC *WebService) newAction(w http.ResponseWriter, r *http.Request) {
 	uploader := imgC.Uploader
 
+	var imagesName map[int]string
 	file, header := uploader.GetFile(r, "image")
 	uploader.MkDir("storage/images/")
 	uploader.MoveFile(file, "storage/images/" + header.Filename)
+	imageName := header.Filename
+	folderPath := "storage/images/"
+	imagesName = uploader.DivideByFour(imageName, folderPath)
+	fmt.Println(imagesName)
 
 	if uploader.GetError() != nil {
 		http.Error(w, uploader.GetError().Error(), 500)
