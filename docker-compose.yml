@@ -1,0 +1,8 @@
+version: '3'
+services:
+    sqlite3:
+        build:
+            context: ./db/docker
+            dockerfile: sqlite3.docker
+        ports:
+            - "8080:8080"
