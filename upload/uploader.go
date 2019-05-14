@@ -18,6 +18,19 @@ import (
 	"image/gif"
 )
 
+type UploaderInterface interface {
+	GetFile(r *http.Request, fileName string) (File, *FileHeader)
+	MkDir(uploadDir string)
+	Copy(dst io.Writer, src io.Reader)
+	CreateFile(filePath string) *os.File
+	MoveFile(file File, filePath string)
+	GetImageType(name string) string
+	GetImageDecode(imagePath string, file *os.File) (image.Image, error)
+	DivideByFour(imagePath string, folderPath string) map[int]string
+	IsImageFile(contentType string) bool
+	GetError() error
+}
+
 type Uploader struct {
 	err error
 }
